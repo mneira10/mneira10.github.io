@@ -1,0 +1,24 @@
+* {
+    padding: 0;
+    margin: 0;
+}
+
+html, body {
+    height: 100%;
+}
+
+.entrance {
+    background-image: url("mandelbrot.png");
+    height: 100%;
+    width: auto;
+    
+    /* Parallax */
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 60%;
+}
+.mainTitle {
+    margin: 0 auto; 
+    color: red;
+}
