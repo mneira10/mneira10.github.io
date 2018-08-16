@@ -7,8 +7,20 @@ html, body {
     height: 100%;
 }
 
+.myImg { 
+    width: 10%;
+    height: auto;
+    border-radius: 50%;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+    top: 30%;
+
+}
+
 .entrance {
-    background-image: url("mandelbrot.png");
+    background-image: url("./images/mandelbrot.png");
     height: 100%;
     width: auto;
     
@@ -18,7 +30,26 @@ html, body {
     background-repeat: no-repeat;
     background-size: 60%;
 }
-.mainTitle {
-    margin: 0 auto; 
+.caption {
+    position: relative;
+    top: 48%;
+    text-align: center;
     color: red;
+}
+
+.recaman {
+    background-image: url("./images/recaman.jpg");
+    height: 100%;
+    width: auto;
+    
+    /* Parallax */
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 80%;
+}
+.mainTitle{
+    font-family: "Questrial";
+    color: #ECF0F1;
+    font-size: 40px;
 }
