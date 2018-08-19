@@ -3,53 +3,92 @@
     margin: 0;
 }
 
-html, body {
+html,
+body {
     height: 100%;
 }
 
-.myImg { 
-    width: 10%;
+.myImg {
+    width: 20%;
     height: auto;
     border-radius: 50%;
     display: block;
     margin-left: auto;
     margin-right: auto;
     position: relative;
-    top: 30%;
-
+    top: 10%;
 }
 
 .entrance {
-    background-image: url("./images/mandelbrot.png");
+    /* background-image: url("./images/mandelbrot.png"); */
+    background: #252526;
     height: 100%;
     width: auto;
-    
-    /* Parallax */
-    background-attachment: fixed;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: 60%;
+    overflow: hidden;
 }
+
 .caption {
     position: relative;
-    top: 48%;
-    text-align: center;
+    top: 37%;
+    text-align: left;
+    padding-left: 20%;
     color: red;
 }
 
-.recaman {
-    background-image: url("./images/recaman.jpg");
-    height: 100%;
-    width: auto;
-    
-    /* Parallax */
-    background-attachment: fixed;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: 80%;
+.glasses {
+    position: absolute;
+    right: 1%;
+    width: 15%;
+    height: auto;
+    transform: rotate(30deg);
 }
-.mainTitle{
-    font-family: "Questrial";
+
+.guitar {
+    transform: rotate(180deg);
+    width: 120%;
+    /* top:10% */
+    
+}
+.computer{
+    /* z-index: 0; */
+    width: 30%;
+    position: relative;
+    bottom:30%;
+    left:35%;
+    transform: rotate(20deg);
+}
+
+.guitar_div {
+    height: 800px;
+    overflow: hidden;
+    width: 50%;
+    /* background-color: red; */
+    position: relative;
+    /* top: 30%; */
+    left: 60%;
+}
+
+.mainTitle {
+    font-family: 'Montserrat';
     color: #ECF0F1;
-    font-size: 40px;
+    font-size: 250px;
+}
+
+.scroll_down_text {
+    font-family: 'Montserrat';
+    color: #ECF0F1;
+    font-size: 20px;
+}
+
+.allMyStuff{
+    position: relative;
+    width: 30%;
+    left: 50%;
+    bottom: 20%;
+}
+
+.scroll_down_div {
+    text-align: center;
+    top: 40%;
+    position: relative;
 }
