@@ -8,6 +8,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" type="text/css" media="screen" href="entrance.css" />
     <link rel="stylesheet" type="text/css" media="screen" href="myInfo.css" />
+    <link rel="stylesheet" type="text/css" media="screen" href="miniProjects.css" />
+    <link rel="stylesheet" type="text/css" media="screen" href="contact.css" />
     <link href="https://fonts.googleapis.com/css?family=Questrial" rel="stylesheet">
     <!-- jQuery library -->
     <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
@@ -15,7 +17,13 @@
 
     <!-- Monsterrat font -->
     <link href="https://fonts.googleapis.com/css?family=Montserrat:900" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet"> 
+    <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
+    <!-- p5js circles -->
+    <!-- <link rel="stylesheet" href="./circles/styles.css"> -->
+	<script src="./circles/libraries/p5.js"></script>
+	<script src="./circles/libraries/p5.dom.js"></script>
+	<script src="./circles/alt.js"></script>
+	<script src="./circles/altCircle.js"></script>
 </head>
 
 <body>
@@ -44,15 +52,36 @@
 
     <div class="myInfo">
         <img data-aos="fade-left" class="myImg" src="./images/me.jpg" alt="Me">
-        <div data-aos="fade-right" id = "infoHeader" class="info">I'm Mauricio Neira</div>
+        <div data-aos="fade-right" id="infoHeader" class="info">I'm Mauricio Neira</div>
         <div data-aos="fade-right" class="info">CS major @ Universidad de los Andes</div>
         <div data-aos="fade-right" class="info">Physics minor</div>
         <div data-aos="fade-right" class="info">Bioinformatics minor</div>
     </div>
 
     <div class="miniProjects">
-        
+        <div class="projectContainer">
+            <div data-aos="zoom-in" class="miniProject">
+                <div class="circle"></div>
+                <p class="title">Mandelbrot and Julia</p>
+            </div>
+            <div data-aos="zoom-in" class="miniProject">
+                <div class="circle"></div>
+                <p class="title">Game of life</p>
+            </div>
+            <div data-aos="zoom-in" class="miniProject circlesP">
+                <div class="circle"></div>
+                <p class="title">Circles</p>
+            </div>
+            <div data-aos="zoom-in" class="miniProject">
+                <div class="circle"></div>
+                <p class="title">Recaman Sequence</p>
+            </div>
+        </div>
+        <div id="circleProject">
+
+        </div>
     </div>
+    <div class="contact"></div>
 </body>
 
 </html>
