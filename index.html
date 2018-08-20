@@ -6,7 +6,8 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Mauricio Neira</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" media="screen" href="main.css" />
+    <link rel="stylesheet" type="text/css" media="screen" href="entrance.css" />
+    <link rel="stylesheet" type="text/css" media="screen" href="myInfo.css" />
     <link href="https://fonts.googleapis.com/css?family=Questrial" rel="stylesheet">
     <!-- jQuery library -->
     <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
@@ -14,6 +15,7 @@
 
     <!-- Monsterrat font -->
     <link href="https://fonts.googleapis.com/css?family=Montserrat:900" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet"> 
 </head>
 
 <body>
@@ -27,26 +29,30 @@
     <!-- first sight for user -->
     <div class="entrance">
         <div class="caption">
-            <span class="mainTitle">Hi</span>
+            <div data-aos="fade-left" class="mainTitle">Hi</div>
+            <div data-aos="fade-left" class="myName">I'm Mauricio Neira</div>
+            <!-- <div class="myNameDiv">
+            </div> -->
         </div>
         <div class="scroll_down_div">
-            <span class="scroll_down_text">(please scroll down)</span>
+            <span data-aos="fade-top" class="scroll_down_text">(please scroll down)</span>
         </div>>
-        <!-- <img class="glasses" src="./images/glasses2.png" alt="glasses">
-        <img class = "computer" src="./images/computer.png" alt="computer">
 
-        <div class="guitar_div">
-            <img class="guitar" src="./images/guitar.png" alt="guitar">
-        </div> -->
-        <img class="allMyStuff" src="./images/all.png" alt="allMyStuff">
+        <img data-aos="fade-right" class="allMyStuff" src="./images/all.png" alt="allMyStuff">
 
     </div>
 
-    <div class="recaman">
-        <img data-aos="fade-top" class="myImg" src="./images/me.jpg" alt="Me">
+    <div class="myInfo">
+        <img data-aos="fade-left" class="myImg" src="./images/me.jpg" alt="Me">
+        <div data-aos="fade-right" id = "infoHeader" class="info">I'm Mauricio Neira</div>
+        <div data-aos="fade-right" class="info">CS major @ Universidad de los Andes</div>
+        <div data-aos="fade-right" class="info">Physics minor</div>
+        <div data-aos="fade-right" class="info">Bioinformatics minor</div>
     </div>
 
-    <h3>Other stuff...</h3>
+    <div class="miniProjects">
+        
+    </div>
 </body>
 
 </html>
