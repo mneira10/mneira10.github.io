@@ -6,82 +6,182 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Mauricio Neira</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" media="screen" href="entrance.css" />
-    <link rel="stylesheet" type="text/css" media="screen" href="myInfo.css" />
-    <link rel="stylesheet" type="text/css" media="screen" href="miniProjects.css" />
-    <link rel="stylesheet" type="text/css" media="screen" href="contact.css" />
-    <link href="https://fonts.googleapis.com/css?family=Questrial" rel="stylesheet">
-    <!-- jQuery library -->
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-    <script src="main.js"></script>
 
-    <!-- Monsterrat font -->
-    <link href="https://fonts.googleapis.com/css?family=Montserrat:900" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
-    <!-- p5js circles -->
-    <!-- <link rel="stylesheet" href="./circles/styles.css"> -->
-	<script src="./circles/libraries/p5.js"></script>
-	<script src="./circles/libraries/p5.dom.js"></script>
-	<script src="./circles/alt.js"></script>
-	<script src="./circles/altCircle.js"></script>
+    <!-- bootstrap -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
+        crossorigin="anonymous">
+    <!-- Raleway font -->
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic|Raleway:400,300,700" rel="stylesheet">
+    <!-- main css -->
+    <link rel="stylesheet" href="./styles/main.css">
+
 </head>
 
-<body>
-    <!-- AOS scroll library -->
+<body class="bg-dark text-light">
+
+
+    <div class="container  h-100">
+
+        <div class="row  h-100 align-items-center">
+            <div class="col-lg-6 align-self-center">
+                <h1 id="hi" data-aos="fade-right" class="display-2">
+                    <b>Hi</b>
+                </h1>
+                <h4 data-aos="fade-right" class="display-5">I'm
+                    <b>Mauricio Neira</b>
+                    </h2>
+                    <!-- animation pending -->
+                    <!-- physicist musician developer  -->
+                    <p data-aos="fade-right">
+                        <span id="animation"></span>
+                    </p>
+            </div>
+            <div class="col-lg-6 ">
+                <img data-aos="fade-left" src="./images/all.png" alt="allMyStuff" class="img-fluid">
+                <br>
+            </div>
+        </div>
+    </div>
+    <!-- landing -->
+
+    <div class="container">
+
+        <div class="row">
+
+            <div class="col-12">
+                <h3 data-aos="fade-in" class="centered">
+                    <b>About Me</b>
+                </h3>
+            </div>
+
+        </div>
+        <br>
+        <div data-aos="fade-in" class="row">
+
+            <div class="col-lg-5">
+                <div class="row">
+                    <div data-aos="fade-right" class="col-lg-12 col-8 offset-2 offset-lg-0">
+                        <img  src="./images/me.jpg" alt="me" class="img-fluid rounded-circle">
+                        <p  class="centered">
+                            Mauricio Neira
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6 offset-lg-1 align-self-center">
+                <p data-aos="fade-left">
+                    <b>CS</b> major @ Universidad de los Andes</p>
+                <p data-aos="fade-left">
+                    <b>Phyics </b>minor</p>
+                <p data-aos="fade-left">
+                    <b>Bioinformatics </b>minor</p>
+                <p data-aos="fade-left">Lifelong musician and traveler</p>
+            </div>
+
+        </div>
+    </div>
+    <!-- basic info -->
+
+    <div class="container"></div>
+
+    <br>
+
+    <!-- languages -->
+    <div class="container">
+
+        <div class="row">
+            <h3 data-aos="fade-in" class="col-12 centered">
+                <b>
+                    Mini Projects
+                </b>
+                </h2>
+        </div>
+
+        <br>
+
+        <div data-aos="fade-in" class="container">
+            <div class="row align-items-center ">
+                <div class="miniProject col-lg-4">
+                    <div class="row">
+                        <button id="mandelbrot" type="button col-12" class="btn btn-danger rounded-circle btn-circle">
+                            <img src="./images/mandelbrotIcon.png" alt="" height="110">
+                        </button>
+                        <p class="centered col-12">Mandelbrot</p>
+                    </div>
+
+                </div>
+                <div class="miniProject col-lg-4">
+                    <div class="row">
+                        <button id="gol" type="button col-12" class="btn btn-danger rounded-circle btn-circle">
+                            <img src="./images/cleanGOL.svg" alt="" height="90">
+                        </button>
+                        <p class="centered col-12">Game of Life</p>
+                    </div>
+                </div>
+                <div class="miniProject col-lg-4">
+                    <div class="row">
+                        <button id="circles" type="button col-12" class="btn btn-danger rounded-circle btn-circle">
+                            <img src="./images/circles.svg" alt="" height="90">
+                        </button>
+                        <p class="centered col-12">Circles</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <!-- miniProjects -->
+
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <h3 data-aos="fade-in" class="centered">
+                    <b>Contact</b>
+                </h3>
+            </div>
+            <div class="row">
+                <div class="col-12">
+
+                    <p>
+                        <b>Email</b>
+                    </p>
+                    <a href="mailto:mneira011@gmail.com">mneira011@gmail.com</a>
+                    <br>
+                    <p>
+
+                    </p>
+                </div>
+
+            </div>
+            <div class="row">
+
+            </div>
+
+
+
+        </div>
+    </div>
+    <!-- contact -->
+
+
+
+    <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script> -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy"
+        crossorigin="anonymous"></script>
+    <!-- bootstrap -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
     <script>
         AOS.init();
     </script>
+    <!-- AOS scroll library -->
 
-    <!-- first sight for user -->
-    <div class="entrance">
-        <div class="caption">
-            <div data-aos="fade-left" class="mainTitle">Hi</div>
-            <div data-aos="fade-left" class="myName">I'm Mauricio Neira</div>
-            <!-- <div class="myNameDiv">
-            </div> -->
-        </div>
-        <div class="scroll_down_div">
-            <span data-aos="fade-top" class="scroll_down_text">(please scroll down)</span>
-        </div>>
-
-        <img data-aos="fade-right" class="allMyStuff" src="./images/all.png" alt="allMyStuff">
-
-    </div>
-
-    <div class="myInfo">
-        <img data-aos="fade-left" class="myImg" src="./images/me.jpg" alt="Me">
-        <div data-aos="fade-right" id="infoHeader" class="info">I'm Mauricio Neira</div>
-        <div data-aos="fade-right" class="info">CS major @ Universidad de los Andes</div>
-        <div data-aos="fade-right" class="info">Physics minor</div>
-        <div data-aos="fade-right" class="info">Bioinformatics minor</div>
-    </div>
-
-    <div class="miniProjects">
-        <div class="projectContainer">
-            <div data-aos="zoom-in" class="miniProject">
-                <div class="circle"></div>
-                <p class="title">Mandelbrot and Julia</p>
-            </div>
-            <div data-aos="zoom-in" class="miniProject">
-                <div class="circle"></div>
-                <p class="title">Game of life</p>
-            </div>
-            <div data-aos="zoom-in" class="miniProject circlesP">
-                <div class="circle"></div>
-                <p class="title">Circles</p>
-            </div>
-            <div data-aos="zoom-in" class="miniProject">
-                <div class="circle"></div>
-                <p class="title">Recaman Sequence</p>
-            </div>
-        </div>
-        <div id="circleProject">
-
-        </div>
-    </div>
-    <div class="contact"></div>
+    <script src="./scripts/main.js"></script>
 </body>
 
 </html>

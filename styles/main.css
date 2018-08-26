@@ -1,0 +1,86 @@
+.centered {
+  text-align: center;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Raleway";
+  font-weight: 300;
+}
+
+html,
+body {
+  /* background-color:#252526 !important; */
+  font-family: "Lato";
+  font-size: 30px;
+  font-weight: 300;
+  height: 100%;
+}
+
+#hi {
+  font-weight: 700;
+}
+
+.btn-circle {
+  width: 150px;
+  height: 150px;
+  padding: 6px 0px;
+  border-radius: 15px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.42857;
+  margin: 0 auto;
+}
+
+.fullHeight {
+  height: 100%;
+}
+
+#animation:after {
+  content: "Developer";
+  /* animation: spin 2s linear infinite; */
+  animation-name: spin;
+  animation-duration: 10s;
+  animation-iteration-count: infinite;
+}
+
+@keyframes spin {
+  0% {
+    content: "Developer";
+    opacity: 1;
+  }
+  10% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 0;
+  }
+  30% {
+    content: "Physicist";
+    opacity: 1;
+  }
+  40% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0;
+  }
+  60% {
+    content: "Musician";
+    opacity: 1;
+  }
+  70% {
+    opacity: 0;
+  }
+  80% {
+    opacity: 0;
+  }
+  90% {
+    content: "Developer";
+    opacity: 1;
+  }
+}
