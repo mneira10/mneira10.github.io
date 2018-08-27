@@ -26,7 +26,9 @@ Just create a simple http server with node:http-server or node: reload and your'
 
 Me :D (Mauricio Neira) - https://mneira10.github.io/
 
-4) Un screenshot, 
+### Screenshot
+
+![alt myWebPage](./screenshot.png)
 
 ### Licence
 
