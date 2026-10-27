@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Installs personal tools into $HOME so they survive Dev Container rebuilds
 # (/home/ubuntu is a named volume; anything installed with apt is lost on rebuild).
-# Safe to re-run: every tool is updated to its latest release.
+# Safe to re-run: tools that are already installed are skipped. Set DEVTOOLS_UPDATE=1 to
+# reinstall them at their latest release.
 # Terminals start in zsh; set DEVTOOLS_NO_ZSH=1 to stay in bash.
 #
 #   curl -fsSL https://mneira10.github.io/box_setup.sh | bash
@@ -11,6 +12,7 @@ BIN_DIR="$HOME/.local/bin"
 OPT_DIR="$HOME/.local/opt"
 SHELL_RC="$HOME/.config/devtools.bash"
 mkdir -p "$BIN_DIR" "$OPT_DIR" "$(dirname "$SHELL_RC")"
+export PATH="$BIN_DIR:$PATH"
 
 # Release assets don't agree on architecture names:
 #   {arch}  x86_64 / aarch64   (Rust-style targets)
@@ -23,6 +25,21 @@ case "$(uname -m)" in
 esac
 
 log() { printf '\n==> %s\n' "$*"; }
+
+# Succeeds if `name` should be installed: it isn't on PATH (or at `path`, if given), or
+# DEVTOOLS_UPDATE is set.
+needs_install() {
+  local name="$1" path="${2:-}"
+  if [ -n "${DEVTOOLS_UPDATE:-}" ]; then
+    return 0
+  elif [ -n "$path" ]; then
+    [ -e "$path" ] || return 0
+  else
+    path="$(command -v "$name")" || return 0
+  fi
+  log "$name is already installed at $path, skipping"
+  return 1
+}
 
 # Prints the latest release tag of a GitHub repo, e.g. `v10.5.0`. Follows the
 # /releases/latest redirect instead of using the API, which is rate limited.
@@ -37,6 +54,7 @@ latest_tag() {
 # `v`), {arch}, {goarch} and {mixed}.
 install_github_binary() {
   local repo="$1" asset="$2" binary="$3" tag tmp
+  needs_install "$binary" || return 0
   log "Installing $binary"
   tag="$(latest_tag "$repo")"
   asset="${asset//\{tag\}/$tag}"
@@ -50,12 +68,14 @@ install_github_binary() {
   rm -rf "$tmp"
 }
 
-log "Installing Neovim"
-rm -rf "$OPT_DIR/nvim"
-mkdir -p "$OPT_DIR/nvim"
-curl -fsSL "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${MIXED_ARCH}.tar.gz" \
-  | tar -xz -C "$OPT_DIR/nvim" --strip-components=1
-ln -sf "$OPT_DIR/nvim/bin/nvim" "$BIN_DIR/nvim"
+if needs_install nvim; then
+  log "Installing Neovim"
+  rm -rf "$OPT_DIR/nvim"
+  mkdir -p "$OPT_DIR/nvim"
+  curl -fsSL "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${MIXED_ARCH}.tar.gz" \
+    | tar -xz -C "$OPT_DIR/nvim" --strip-components=1
+  ln -sf "$OPT_DIR/nvim/bin/nvim" "$BIN_DIR/nvim"
+fi
 
 install_github_binary aristocratos/btop "btop-{arch}-unknown-linux-musl.tar.gz" btop
 install_github_binary BurntSushi/ripgrep "ripgrep-{version}-{arch}-unknown-linux-musl.tar.gz" rg
@@ -66,19 +86,29 @@ install_github_binary junegunn/fzf "fzf-{version}-linux_{goarch}.tar.gz" fzf
 install_github_binary ajeetdsouza/zoxide "zoxide-{version}-{arch}-unknown-linux-musl.tar.gz" zoxide
 install_github_binary starship/starship "starship-{arch}-unknown-linux-musl.tar.gz" starship
 
-log "Installing herdr"
-curl -fsSL https://herdr.dev/install.sh | HERDR_INSTALL_DIR="$BIN_DIR" sh
+if needs_install herdr; then
+  log "Installing herdr"
+  curl -fsSL https://herdr.dev/install.sh | HERDR_INSTALL_DIR="$BIN_DIR" sh
+fi
 
-log "Installing zsh"
-# A static zsh build, since zsh from apt would be lost on every Dev Container rebuild.
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)" \
-  -- -q -d "$HOME/.local" -e no
+# A static zsh build, since zsh from apt would be lost on every Dev Container rebuild. The
+# shell config below runs ~/.local/bin/zsh, so a zsh elsewhere on PATH doesn't count.
+if needs_install zsh "$BIN_DIR/zsh"; then
+  log "Installing zsh"
+  sh -c "$(curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)" \
+    -- -q -d "$HOME/.local" -e no
+fi
 
-log "Installing antidote (zsh plugin manager)"
 ANTIDOTE_DIR="$HOME/.local/share/antidote"
 if [ -d "$ANTIDOTE_DIR/.git" ]; then
-  git -C "$ANTIDOTE_DIR" pull --quiet --ff-only
+  if [ -n "${DEVTOOLS_UPDATE:-}" ]; then
+    log "Updating antidote (zsh plugin manager)"
+    git -C "$ANTIDOTE_DIR" pull --quiet --ff-only
+  else
+    log "antidote is already installed at $ANTIDOTE_DIR, skipping"
+  fi
 else
+  log "Installing antidote (zsh plugin manager)"
   git clone --quiet --depth 1 https://github.com/mattmc3/antidote "$ANTIDOTE_DIR"
 fi
 
@@ -189,7 +219,6 @@ fi
 
 # Download the zsh plugins now so the first terminal doesn't have to.
 "$BIN_DIR/zsh" -c "source '$ANTIDOTE_DIR/antidote.zsh' && antidote load '$HOME/.config/devtools/zsh_plugins.txt'"
-export PATH="$BIN_DIR:$PATH"
 
 log "Installing LazyVim"
 if [ -e "$HOME/.config/nvim" ]; then
@@ -221,7 +250,7 @@ nvim --headless "+Lazy! sync" +qa
 
 log "Installed"
 for tool in zsh starship nvim btop rg fd bat lazygit fzf zoxide herdr; do
-  printf '%-8s %s\n' "$tool" "$("$BIN_DIR/$tool" --version 2>&1 | head -1)"
+  printf '%-8s %s\n' "$tool" "$("$tool" --version 2>&1 | head -1)"
 done
 
 # This script runs in its own process, so it can't change the shell that launched it.
