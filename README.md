@@ -22,6 +22,25 @@ Personal web page with basic personal info, mini js projects and contact info.
 
 Just create a simple http server with node:http-server or node: reload and your're good to go!
 
+### Agent skills
+
+`box_setup.sh` installs the complete directories in `skills/` into
+`~/.local/share/devtools/skills/` and links each one into both `~/.codex/skills/`
+and `~/.claude/skills/`. Running the script from a checkout uses its bundled files;
+the `curl | bash` installation downloads them from this repo's `master` branch.
+Installed skills are skipped on reruns; set `DEVTOOLS_UPDATE=1` to refresh them.
+Existing same-name directories are backed up under
+`~/.local/share/devtools/skill-backups/` before linking. Unrelated skills are preserved.
+
+- `upcodes-pr-review` includes every review reference and the Codex adaptations
+  for paths and subagent concurrency.
+- `grill-me` and `grilling` come from `mattpocock/skills` at commit
+  `a496f5513d4a4cf889bc48e189e579f4b0bdf6aa`. The launcher reads
+  `../grilling/SKILL.md` directly, so both directories are required.
+- `upcodes-pr-review` and `grill-me` require explicit invocation in both agents;
+  `grilling` permits automatic invocation. Codex policies remain in
+  `agents/openai.yaml`; Claude's equivalent is in `SKILL.md` frontmatter.
+
 ### Authors
 
 Me :D (Mauricio Neira) - https://mneira10.github.io/
