@@ -33,8 +33,9 @@ Existing same-name directories are backed up under
 `~/.local/share/devtools/skill-backups/` before linking. Unrelated skills are preserved.
 
 - `upcodes-pr-review` keeps all review checks and guidance in one reference,
-  with separate GitHub posting instructions and agent metadata. Reviews respect
-  the available subagent concurrency and use paths relative to the skill.
+  with separate GitHub posting instructions and agent metadata. Security runs in
+  its own independent subagent. Reviews respect the available subagent concurrency
+  and use paths relative to the skill.
 - `grill-me` consolidates the launcher and interview instructions from
   `mattpocock/skills` at commit `a496f5513d4a4cf889bc48e189e579f4b0bdf6aa`
   into one self-contained skill.

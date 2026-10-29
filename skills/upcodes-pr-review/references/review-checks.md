@@ -9,7 +9,7 @@ context. Stay within the assigned scope.
 You are one of several reviewers looking at the same PR. Each reviewer has one narrow focus. Stay inside yours: another agent covers the rest, so going outside your focus only creates duplicates.
 
 - Review the checkout locally. It's read-only: don't edit files, stash, switch branches, fetch, run migrations, or write to GitHub.
-- The orchestrator gives you the base, HEAD, diff command, PR description, and existing review comments. Don't repeat points other reviewers already raised.
+- The orchestrator gives you the base, HEAD, diff command, PR description, and existing review comments. Security runs independently without previous findings or review comments; the orchestrator handles its duplicates afterwards. Other reviewers shouldn't repeat points already raised.
 - Read the changed files in full plus the code around them, not just the diff hunks. If the worktree is dirty, read committed code with `git show HEAD:<path>`.
 - Focus on problems this PR introduces, not pre-existing ones.
 - Leave linting, type checks, formatting, and the test suite to CI. Only run a targeted test when it settles a specific question.
@@ -189,12 +189,29 @@ Common places to look in this codebase:
 - Soft-deleted rows: `get_` helpers that include or exclude `deleted_at` rows unexpectedly; `update_` helpers touching `deleted_at`. `UNSPECIFIED` vs `None` for optional ORM params.
 - Transactions and commits: partial writes on error, missing commit/rollback, work outside the session.
 - Retries and workers: does a retry or partial failure duplicate rows, credit consumption, or external calls?
-- Auth and permissions on new endpoints; data from one org/user reachable by another.
 - Frontend: stale closures, effects with missing or wrong deps, race conditions between requests, state not reset when props/route change, SSR vs browser-only code (`window`).
 - Off-by-one, pagination, ordering assumptions, timezone handling.
 - Error handling that swallows exceptions or reports success on failure.
 
 Label findings `bug`. Not your job: style, naming, simplification.
+
+## Check: security
+
+Run independently in a fresh subagent context, without reading other reviewers' findings or previous PR reviews. Review the changed code and the callers, guards, and configuration that determine its security. Stay within this PR's changes; skip clearly inapplicable areas rather than inventing concerns.
+
+Trace attacker-controlled inputs across trust boundaries to sensitive operations or data. Focus on the areas the diff touches:
+
+- Authentication and authorization: missing or bypassed permissions, cross-account or cross-organization reads and writes, privilege escalation, and changed session or token handling.
+- Injection and unsafe execution: SQL, shell, template, and browser injection; unsafe deserialization; untrusted input reaching executable code.
+- Network and file access: server-side requests to attacker-chosen destinations, unsafe redirects, path traversal, and uploaded files reaching unintended locations or execution paths.
+- Sensitive information: secrets or private data exposed through responses, logs, errors, client bundles, or external services.
+- Security controls in changed configuration, dependencies, and scripts. For AI features, trace whether untrusted retrieved content or model output can bypass tool authorization or expose protected data.
+
+For each finding, identify the attacker's required access, the input or action they control, the reachable `path:line` sequence, the missing or ineffective protection, and the concrete impact. Read existing authorization checks, validators, escaping, and framework protections to try to rule it out. A dangerous-looking API alone isn't evidence of a vulnerability.
+
+Use the shared finding format with `check: security`. Include the attack scenario and evidence in `problem`. Label a confirmed vulnerability `bug`; clearly distinguish an unverified design risk from an exploit that the code allows, and state what evidence is missing.
+
+Keep analysis local and read-only. Don't probe deployed services, use real credentials, install scanners, or run exploit payloads against shared systems. If a safe local check is needed to settle a claim, describe it for the orchestrator to assess.
 
 ## Check: tests
 
