@@ -74,7 +74,7 @@ install_agent_skills() (
   local setup_script="${1:-}" source_dir="" tmp="" skill bundle_skill agent target link backup
   local skills_dir="$HOME/.local/share/devtools/skills"
   local backups_dir="$HOME/.local/share/devtools/skill-backups"
-  local skills=(upcodes-pr-review grill-me grilling)
+  local skills=(upcodes-pr-review grill-me)
   trap '[ -z "$tmp" ] || rm -rf "$tmp"' EXIT
 
   if [ -n "$setup_script" ] && [ -d "$(dirname "$setup_script")/skills" ]; then

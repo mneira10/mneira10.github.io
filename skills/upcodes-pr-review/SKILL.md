@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 The goal is to help the author make the change simpler, easier to read, and harder to misuse, without changing what it does. Look for better implementations even when the code works and CI passes. Zero comments is a valid result.
 
-Reviewers do better work with a narrow scope, so you orchestrate: gather the context once, send each check to its own subagent, then merge the results and decide what's worth saying. The check briefs live in `references/checks/` in this skill's directory (`~/.codex/skills/upcodes-pr-review/`).
+Gather the context once, give each subagent one narrow check, then merge their findings. All check briefs, calibration examples, conventions, and AI guidance are in [references/review-checks.md](references/review-checks.md). Resolve that path relative to this skill's directory.
 
 ## 1. Set up
 
@@ -24,29 +24,22 @@ Mauro checks out the branch before invoking this skill. Review that checkout loc
 
 Use the available subagent tool to run independent checks in parallel, respecting the session’s concurrency limit; run remaining checks in batches as slots become available. Each reviewer needs file reads and read-only shell commands.
 
-**Always:**
-
-| Check | Brief |
+| Check section | Run when |
 | --- | --- |
-| readability | `references/checks/readability.md` |
-| simplicity and footguns | `references/checks/simplicity.md` |
-| reuse and existing patterns | `references/checks/reuse.md` |
-| styleguide | `references/checks/styleguide.md` |
-| bugs | `references/checks/bugs.md` |
-
-**Only when the diff calls for it:**
-
-| Check | Spawn when | Brief |
-| --- | --- | --- |
-| tests | the PR fixes a bug, or adds or changes tests | `references/checks/tests.md` |
-| migrations | migrations or DB models change | `references/checks/migrations.md` |
-| AI features | AI, prompt, retrieval, agent, or model code changes | `references/checks/ai.md` |
+| readability | always |
+| simplicity and footguns | always |
+| reuse and existing patterns | always |
+| styleguide | always |
+| bugs | always |
+| tests | the PR fixes a bug, or adds or changes tests |
+| migrations | migrations or DB models change |
+| AI features | AI, prompt, retrieval, agent, or model code changes |
 
 Skip a check when it clearly can't apply (e.g. reuse on a PR that only deletes code, styleguide on a one-line config bump), and say which ones you skipped.
 
 Each subagent prompt contains:
 
-1. "Read `~/.codex/skills/upcodes-pr-review/references/checks/_shared.md` and `~/.codex/skills/upcodes-pr-review/references/checks/<check>.md`, then follow them."
+1. The absolute path to `references/review-checks.md`, with instructions to read Shared rules, Calibration, and its assigned Check section. Include UpCodes conventions for styleguide and AI review context for AI features.
 2. The repo path, branch, base ref, merge-base, HEAD, and the diff command. Say whether the worktree is dirty.
 3. A short summary of what the PR is meant to do (from the description and your skim) and the list of changed files.
 4. Points already raised by other reviewers or in Mauro's pending review, so they aren't repeated.
@@ -60,7 +53,7 @@ If subagents aren't available, run the checks one after another yourself, readin
 - **Deduplicate.** Different checks will flag the same lines. Merge them into one comment, keeping the strongest framing and the best fix.
 - **Resolve conflicts.** If two checks propose incompatible fixes (e.g. readability wants a helper inlined, reuse wants it replaced with an existing one), pick one or present the trade-off in a single comment.
 - **Verify bugs.** For every `bug` finding, read the cited path yourself and try to disprove it: look for guards, validation, or callers that prevent it. If it doesn't hold up, drop it or downgrade it to a design risk. Do the same for any finding with `confidence: low` that you're thinking of keeping.
-- **Filter.** Drop findings that match the "don't comment on" list in [references/review-calibration.md](references/review-calibration.md), anything already raised by other reviewers or in Mauro's pending review, and anything outside this PR's changes.
+- **Filter.** Drop findings that match the [don't comment on list](references/review-checks.md#dont-comment-on), anything already raised by other reviewers or in Mauro's pending review, and anything outside this PR's changes.
 - **Check line numbers.** Make sure each `path:line` points at the right line in the file at HEAD.
 
 ## 4. Report

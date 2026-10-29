@@ -32,13 +32,13 @@ Installed skills are skipped on reruns; set `DEVTOOLS_UPDATE=1` to refresh them.
 Existing same-name directories are backed up under
 `~/.local/share/devtools/skill-backups/` before linking. Unrelated skills are preserved.
 
-- `upcodes-pr-review` includes every review reference and the Codex adaptations
-  for paths and subagent concurrency.
-- `grill-me` and `grilling` come from `mattpocock/skills` at commit
-  `a496f5513d4a4cf889bc48e189e579f4b0bdf6aa`. The launcher reads
-  `../grilling/SKILL.md` directly, so both directories are required.
-- `upcodes-pr-review` and `grill-me` require explicit invocation in both agents;
-  `grilling` permits automatic invocation. Codex policies remain in
+- `upcodes-pr-review` keeps all review checks and guidance in one reference,
+  with separate GitHub posting instructions and agent metadata. Reviews respect
+  the available subagent concurrency and use paths relative to the skill.
+- `grill-me` consolidates the launcher and interview instructions from
+  `mattpocock/skills` at commit `a496f5513d4a4cf889bc48e189e579f4b0bdf6aa`
+  into one self-contained skill.
+- Both skills require explicit invocation in both agents. Codex policies remain in
   `agents/openai.yaml`; Claude's equivalent is in `SKILL.md` frontmatter.
 
 ### Authors
