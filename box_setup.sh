@@ -68,6 +68,62 @@ install_github_binary() {
   rm -rf "$tmp"
 }
 
+# Keep one installed copy, shared by Codex and Claude. A local checkout supplies the
+# files directly; curl | bash downloads them from this repo, like the tools above.
+install_agent_skills() (
+  local setup_script="${1:-}" source_dir="" tmp="" skill bundle_skill agent target link backup
+  local skills_dir="$HOME/.local/share/devtools/skills"
+  local backups_dir="$HOME/.local/share/devtools/skill-backups"
+  local skills=(upcodes-pr-review grill-me grilling)
+  trap '[ -z "$tmp" ] || rm -rf "$tmp"' EXIT
+
+  if [ -n "$setup_script" ] && [ -d "$(dirname "$setup_script")/skills" ]; then
+    source_dir="$(cd "$(dirname "$setup_script")/skills" && pwd)"
+  fi
+
+  mkdir -p "$skills_dir" "$HOME/.codex/skills" "$HOME/.claude/skills"
+  for skill in "${skills[@]}"; do
+    target="$skills_dir/$skill"
+    if needs_install "$skill skill" "$target/SKILL.md"; then
+      if [ -z "$source_dir" ]; then
+        log "Downloading agent skills"
+        tmp="$(mktemp -d)"
+        curl -fsSL https://github.com/mneira10/mneira10.github.io/archive/refs/heads/master.tar.gz \
+          | tar -xz -C "$tmp" --strip-components=1
+        source_dir="$tmp/skills"
+      fi
+      # Check the bundle before replacing any installed skills.
+      for bundle_skill in "${skills[@]}"; do
+        if [ ! -f "$source_dir/$bundle_skill/SKILL.md" ]; then
+          echo "Missing skill: $source_dir/$bundle_skill/SKILL.md" >&2
+          exit 1
+        fi
+      done
+      log "Installing $skill"
+      rm -rf "$target"
+      cp -R "$source_dir/$skill" "$target"
+    fi
+
+    for agent in codex claude; do
+      link="$HOME/.$agent/skills/$skill"
+      if [ -L "$link" ] && [ "$(readlink "$link")" = "$target" ]; then
+        continue
+      fi
+      # Keep pre-existing copies outside the discovery directories, so they don't
+      # appear as duplicate skills. Unrelated skills are never touched.
+      if [ -e "$link" ] && [ ! -L "$link" ]; then
+        mkdir -p "$backups_dir"
+        backup="$(mktemp -d "$backups_dir/$agent-$skill.XXXXXX")"
+        mv "$link" "$backup/$skill"
+        log "Backed up $link to $backup/$skill"
+      fi
+      ln -sfnT "$target" "$link"
+    done
+  done
+)
+
+install_agent_skills "${BASH_SOURCE[0]:-}"
+
 if needs_install nvim; then
   log "Installing Neovim"
   rm -rf "$OPT_DIR/nvim"
