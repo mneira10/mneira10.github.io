@@ -28,7 +28,7 @@ Just create a simple http server with node:http-server or node: reload and your'
 `~/.local/share/devtools/skills/` and links each one into both `~/.codex/skills/`
 and `~/.claude/skills/`. Running the script from a checkout uses its bundled files;
 the `curl | bash` installation downloads them from this repo's `master` branch.
-Installed skills are skipped on reruns; set `DEVTOOLS_UPDATE=1` to refresh them.
+Every run refreshes the installed skills.
 Existing same-name directories are backed up under
 `~/.local/share/devtools/skill-backups/` before linking. Unrelated skills are preserved.
 

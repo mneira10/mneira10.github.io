@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Installs personal tools into $HOME so they survive Dev Container rebuilds
 # (/home/ubuntu is a named volume; anything installed with apt is lost on rebuild).
-# Safe to re-run: tools that are already installed are skipped. Set DEVTOOLS_UPDATE=1 to
-# reinstall them at their latest release.
+# Safe to re-run: each run updates every tool to its latest release, skipping downloads
+# for tools that are already current.
+# Points Claude Code and Codex at the CLIProxyAPI proxy; the script asks for the key, or
+# reads it from $CLIPROXY_API_KEY when there's no terminal.
 # Terminals start in zsh; set DEVTOOLS_NO_ZSH=1 to stay in bash.
 #
 #   curl -fsSL https://mneira10.github.io/box_setup.sh | bash
@@ -10,8 +12,8 @@ set -euo pipefail
 
 BIN_DIR="$HOME/.local/bin"
 OPT_DIR="$HOME/.local/opt"
-SHELL_RC="$HOME/.config/devtools.bash"
-mkdir -p "$BIN_DIR" "$OPT_DIR" "$(dirname "$SHELL_RC")"
+VERSIONS_DIR="$HOME/.local/share/devtools/versions"
+mkdir -p "$BIN_DIR" "$OPT_DIR" "$VERSIONS_DIR" "$HOME/.config"
 export PATH="$BIN_DIR:$PATH"
 
 # Release assets don't agree on architecture names:
@@ -26,19 +28,18 @@ esac
 
 log() { printf '\n==> %s\n' "$*"; }
 
-# Succeeds if `name` should be installed: it isn't on PATH (or at `path`, if given), or
-# DEVTOOLS_UPDATE is set.
-needs_install() {
-  local name="$1" path="${2:-}"
-  if [ -n "${DEVTOOLS_UPDATE:-}" ]; then
-    return 0
-  elif [ -n "$path" ]; then
-    [ -e "$path" ] || return 0
-  else
-    path="$(command -v "$name")" || return 0
+# Succeeds if `name` should be (re)installed: `path` is missing, or it was installed from
+# a release other than `version`. Call mark_installed after installing it.
+needs_update() {
+  local name="$1" version="$2" path="$3"
+  if [ -e "$path" ] && [ "$(cat "$VERSIONS_DIR/$name" 2>/dev/null)" = "$version" ]; then
+    log "$name is up to date ($version)"
+    return 1
   fi
-  log "$name is already installed at $path, skipping"
-  return 1
+}
+
+mark_installed() {
+  echo "$2" >"$VERSIONS_DIR/$1"
 }
 
 # Prints the latest release tag of a GitHub repo, e.g. `v10.5.0`. Follows the
@@ -49,29 +50,34 @@ latest_tag() {
   echo "${url##*/}"
 }
 
-# Downloads the latest release tarball of a GitHub repo and copies the named binary
-# from it into $BIN_DIR. `asset` may use {tag}, {version} (the tag without a leading
-# `v`), {arch}, {goarch} and {mixed}.
+# Downloads the latest release of a GitHub repo and copies the named binary into
+# $BIN_DIR. `asset` is either a tarball containing the binary or the binary itself, and
+# may use {tag}, {version} (the tag without a leading `v`), {arch}, {goarch} and {mixed}.
 install_github_binary() {
   local repo="$1" asset="$2" binary="$3" tag tmp
-  needs_install "$binary" || return 0
-  log "Installing $binary"
   tag="$(latest_tag "$repo")"
+  needs_update "$binary" "$tag" "$BIN_DIR/$binary" || return 0
+  log "Installing $binary $tag"
   asset="${asset//\{tag\}/$tag}"
   asset="${asset//\{version\}/${tag#v}}"
   asset="${asset//\{arch\}/$ARCH}"
   asset="${asset//\{goarch\}/$GOARCH}"
   asset="${asset//\{mixed\}/$MIXED_ARCH}"
   tmp="$(mktemp -d)"
-  curl -fsSL "https://github.com/$repo/releases/download/$tag/$asset" | tar -xz -C "$tmp"
+  if [[ $asset == *.tar.gz ]]; then
+    curl -fsSL "https://github.com/$repo/releases/download/$tag/$asset" | tar -xz -C "$tmp"
+  else
+    curl -fsSL -o "$tmp/$binary" "https://github.com/$repo/releases/download/$tag/$asset"
+  fi
   install -m 0755 "$(find "$tmp" -type f -name "$binary" | head -1)" "$BIN_DIR/$binary"
   rm -rf "$tmp"
+  mark_installed "$binary" "$tag"
 }
 
 # Keep one installed copy, shared by Codex and Claude. A local checkout supplies the
 # files directly; curl | bash downloads them from this repo, like the tools above.
 install_agent_skills() (
-  local setup_script="${1:-}" source_dir="" tmp="" skill bundle_skill agent target link backup
+  local setup_script="${1:-}" source_dir="" tmp="" skill agent target link backup
   local skills_dir="$HOME/.local/share/devtools/skills"
   local backups_dir="$HOME/.local/share/devtools/skill-backups"
   local skills=(upcodes-pr-review grill-me)
@@ -81,28 +87,27 @@ install_agent_skills() (
     source_dir="$(cd "$(dirname "$setup_script")/skills" && pwd)"
   fi
 
+  if [ -z "$source_dir" ]; then
+    log "Downloading agent skills"
+    tmp="$(mktemp -d)"
+    curl -fsSL https://github.com/mneira10/mneira10.github.io/archive/refs/heads/master.tar.gz \
+      | tar -xz -C "$tmp" --strip-components=1
+    source_dir="$tmp/skills"
+  fi
+  # Check the bundle before replacing any installed skills.
+  for skill in "${skills[@]}"; do
+    if [ ! -f "$source_dir/$skill/SKILL.md" ]; then
+      echo "Missing skill: $source_dir/$skill/SKILL.md" >&2
+      exit 1
+    fi
+  done
+
   mkdir -p "$skills_dir" "$HOME/.codex/skills" "$HOME/.claude/skills"
   for skill in "${skills[@]}"; do
     target="$skills_dir/$skill"
-    if needs_install "$skill skill" "$target/SKILL.md"; then
-      if [ -z "$source_dir" ]; then
-        log "Downloading agent skills"
-        tmp="$(mktemp -d)"
-        curl -fsSL https://github.com/mneira10/mneira10.github.io/archive/refs/heads/master.tar.gz \
-          | tar -xz -C "$tmp" --strip-components=1
-        source_dir="$tmp/skills"
-      fi
-      # Check the bundle before replacing any installed skills.
-      for bundle_skill in "${skills[@]}"; do
-        if [ ! -f "$source_dir/$bundle_skill/SKILL.md" ]; then
-          echo "Missing skill: $source_dir/$bundle_skill/SKILL.md" >&2
-          exit 1
-        fi
-      done
-      log "Installing $skill"
-      rm -rf "$target"
-      cp -R "$source_dir/$skill" "$target"
-    fi
+    log "Installing $skill skill"
+    rm -rf "$target"
+    cp -R "$source_dir/$skill" "$target"
 
     for agent in codex claude; do
       link="$HOME/.$agent/skills/$skill"
@@ -124,13 +129,15 @@ install_agent_skills() (
 
 install_agent_skills "${BASH_SOURCE[0]:-}"
 
-if needs_install nvim; then
-  log "Installing Neovim"
+NVIM_TAG="$(latest_tag neovim/neovim)"
+if needs_update nvim "$NVIM_TAG" "$BIN_DIR/nvim"; then
+  log "Installing Neovim $NVIM_TAG"
   rm -rf "$OPT_DIR/nvim"
   mkdir -p "$OPT_DIR/nvim"
-  curl -fsSL "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${MIXED_ARCH}.tar.gz" \
+  curl -fsSL "https://github.com/neovim/neovim/releases/download/$NVIM_TAG/nvim-linux-${MIXED_ARCH}.tar.gz" \
     | tar -xz -C "$OPT_DIR/nvim" --strip-components=1
   ln -sf "$OPT_DIR/nvim/bin/nvim" "$BIN_DIR/nvim"
+  mark_installed nvim "$NVIM_TAG"
 fi
 
 install_github_binary aristocratos/btop "btop-{arch}-unknown-linux-musl.tar.gz" btop
@@ -141,28 +148,30 @@ install_github_binary jesseduffield/lazygit "lazygit_{version}_linux_{mixed}.tar
 install_github_binary junegunn/fzf "fzf-{version}-linux_{goarch}.tar.gz" fzf
 install_github_binary ajeetdsouza/zoxide "zoxide-{version}-{arch}-unknown-linux-musl.tar.gz" zoxide
 install_github_binary starship/starship "starship-{arch}-unknown-linux-musl.tar.gz" starship
+install_github_binary jqlang/jq "jq-linux-{goarch}" jq
 
-if needs_install herdr; then
-  log "Installing herdr"
+# The installer downloads whatever release this manifest names.
+HERDR_VERSION="$(curl -fsSL https://herdr.dev/latest.json | jq -r .version)"
+if needs_update herdr "$HERDR_VERSION" "$BIN_DIR/herdr"; then
+  log "Installing herdr $HERDR_VERSION"
   curl -fsSL https://herdr.dev/install.sh | HERDR_INSTALL_DIR="$BIN_DIR" sh
+  mark_installed herdr "$HERDR_VERSION"
 fi
 
 # A static zsh build, since zsh from apt would be lost on every Dev Container rebuild. The
 # shell config below runs ~/.local/bin/zsh, so a zsh elsewhere on PATH doesn't count.
-if needs_install zsh "$BIN_DIR/zsh"; then
-  log "Installing zsh"
+ZSH_BIN_TAG="$(latest_tag romkatv/zsh-bin)"
+if needs_update zsh "$ZSH_BIN_TAG" "$BIN_DIR/zsh"; then
+  log "Installing zsh $ZSH_BIN_TAG"
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)" \
     -- -q -d "$HOME/.local" -e no
+  mark_installed zsh "$ZSH_BIN_TAG"
 fi
 
 ANTIDOTE_DIR="$HOME/.local/share/antidote"
 if [ -d "$ANTIDOTE_DIR/.git" ]; then
-  if [ -n "${DEVTOOLS_UPDATE:-}" ]; then
-    log "Updating antidote (zsh plugin manager)"
-    git -C "$ANTIDOTE_DIR" pull --quiet --ff-only
-  else
-    log "antidote is already installed at $ANTIDOTE_DIR, skipping"
-  fi
+  log "Updating antidote (zsh plugin manager)"
+  git -C "$ANTIDOTE_DIR" pull --quiet --ff-only
 else
   log "Installing antidote (zsh plugin manager)"
   git clone --quiet --depth 1 https://github.com/mattmc3/antidote "$ANTIDOTE_DIR"
@@ -176,6 +185,7 @@ rm -f "$HOME/.config/devtools.bash"  # Moved into ~/.config/devtools/.
 
 cat >"$HOME/.config/devtools/bashrc" <<'RC'
 export PATH="$HOME/.local/bin:$PATH"
+[ -f "$HOME/.config/devtools/secrets" ] && source "$HOME/.config/devtools/secrets"
 # Terminals start bash, so hand interactive sessions over to zsh. Skip `bash -c`
 # (editors and agents run commands that way) and set DEVTOOLS_NO_ZSH=1 to stay in bash.
 if [[ $- == *i* && -z ${BASH_EXECUTION_STRING:-} && -t 0 && -z ${DEVTOOLS_NO_ZSH:-} \
@@ -235,6 +245,9 @@ ensure_line() {
 sed -i '/\.config\/devtools\.bash/d' "$HOME/.bashrc" 2>/dev/null || true
 ensure_line "$HOME/.bashrc" '.config/devtools/bashrc' 'source "$HOME/.config/devtools/bashrc"'
 ensure_line "$HOME/.zshrc" '.config/devtools/zshrc' 'source "$HOME/.config/devtools/zshrc"'
+# ~/.zshenv is read by every zsh, including non-interactive ones that agents start.
+ensure_line "$HOME/.zshenv" '.config/devtools/secrets' \
+  '[ -f "$HOME/.config/devtools/secrets" ] && source "$HOME/.config/devtools/secrets"'
 
 if [ ! -e "$HOME/.config/starship.toml" ]; then
   cat >"$HOME/.config/starship.toml" <<'TOML'
@@ -273,8 +286,93 @@ deleted    = ""
 TOML
 fi
 
-# Download the zsh plugins now so the first terminal doesn't have to.
-"$BIN_DIR/zsh" -c "source '$ANTIDOTE_DIR/antidote.zsh' && antidote load '$HOME/.config/devtools/zsh_plugins.txt'"
+# Download and update the zsh plugins now so the first terminal doesn't have to.
+"$BIN_DIR/zsh" -c "source '$ANTIDOTE_DIR/antidote.zsh' \
+  && antidote load '$HOME/.config/devtools/zsh_plugins.txt' && antidote update --bundles"
+
+PROXY_URL="https://sweep-jawed-captivate.ngrok-free.dev"
+SECRETS_FILE="$HOME/.config/devtools/secrets"
+
+# Points Claude Code and Codex at the CLIProxyAPI proxy. The key is saved in
+# $SECRETS_FILE, which bash and zsh source, and in Claude Code's settings. Asks for the
+# key when there's a terminal (Enter keeps the current one); otherwise uses
+# $CLIPROXY_API_KEY or the saved key.
+configure_agent_proxy() {
+  local key="${CLIPROXY_API_KEY:-}" input settings config tmp
+  if [ -z "$key" ] && [ -f "$SECRETS_FILE" ]; then
+    key="$(source "$SECRETS_FILE" && printf '%s' "${CLIPROXY_API_KEY:-}")"
+  fi
+  # curl | bash uses stdin for the script, so read the key from the terminal.
+  if { : </dev/tty; } 2>/dev/null; then
+    if [ -n "$key" ]; then
+      printf 'CLIProxyAPI key (Enter keeps the current one): ' >/dev/tty
+    else
+      printf 'CLIProxyAPI key (Enter skips the proxy setup): ' >/dev/tty
+    fi
+    IFS= read -rs input </dev/tty || true
+    printf '\n' >/dev/tty
+    [ -z "$input" ] || key="$input"
+  fi
+  if [ -z "$key" ]; then
+    log "No CLIProxyAPI key, skipping the Claude Code and Codex proxy setup"
+    return 0
+  fi
+
+  log "Pointing Claude Code and Codex at $PROXY_URL"
+  (umask 077 && printf 'export CLIPROXY_API_KEY=%q\n' "$key" >"$SECRETS_FILE")
+  chmod 600 "$SECRETS_FILE"
+
+  # Only the two env entries change; other settings are kept.
+  settings="$HOME/.claude/settings.json"
+  mkdir -p "$HOME/.claude"
+  [ -s "$settings" ] || echo '{}' >"$settings"
+  tmp="$(mktemp)"
+  jq --arg url "$PROXY_URL" --arg key "$key" \
+    '.env.ANTHROPIC_BASE_URL = $url | .env.ANTHROPIC_AUTH_TOKEN = $key' "$settings" >"$tmp"
+  cat "$tmp" >"$settings"
+  rm "$tmp"
+  chmod 600 "$settings"
+
+  # Rewrite the managed blocks between the markers. The top-level keys must come before
+  # any table, and settings they replace are dropped so TOML doesn't see duplicate keys.
+  config="$HOME/.codex/config.toml"
+  mkdir -p "$HOME/.codex"
+  touch "$config"
+  tmp="$(mktemp)"
+  {
+    cat <<'TOML'
+# >>> devtools cliproxy >>>
+model_provider = "cliproxy"
+model = "gpt-6.1-sol"
+# <<< devtools cliproxy <<<
+
+TOML
+    awk '
+      /^# >>> devtools cliproxy >>>/ { managed = 1; next }
+      managed { if (/^# <<< devtools cliproxy <<</) managed = 0; next }
+      /^[[:space:]]*\[/ { table = 1; cliproxy = /^[[:space:]]*\[model_providers\.cliproxy\]/ }
+      cliproxy { next }
+      !table && /^[[:space:]]*(model|model_provider)[[:space:]]*=/ { next }
+      # Drop leading and trailing blank lines, so reruns do not add more.
+      /^[[:space:]]*$/ { blanks = blanks "\n"; next }
+      { if (printed) printf "%s", blanks; blanks = ""; printed = 1; print }
+      END { if (printed) print "" }
+    ' "$config"
+    cat <<TOML
+# >>> devtools cliproxy >>>
+[model_providers.cliproxy]
+name = "CLIProxyAPI"
+base_url = "$PROXY_URL/v1"
+wire_api = "responses"
+env_key = "CLIPROXY_API_KEY"
+# <<< devtools cliproxy <<<
+TOML
+  } >"$tmp"
+  cat "$tmp" >"$config"
+  rm "$tmp"
+}
+
+configure_agent_proxy
 
 log "Installing LazyVim"
 if [ -e "$HOME/.config/nvim" ]; then
@@ -305,7 +403,7 @@ LUA
 nvim --headless "+Lazy! sync" +qa
 
 log "Installed"
-for tool in zsh starship nvim btop rg fd bat lazygit fzf zoxide herdr; do
+for tool in zsh starship nvim btop rg fd bat lazygit fzf zoxide jq herdr; do
   printf '%-8s %s\n' "$tool" "$("$tool" --version 2>&1 | head -1)"
 done
 
