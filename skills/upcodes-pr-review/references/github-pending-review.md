@@ -9,16 +9,16 @@ gh pr view --json number,url,headRefOid
 gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){reviews(states:PENDING,first:5){nodes{id author{login} comments(first:100){totalCount nodes{path line body}}}}}}}' -f o=upcodes -f r=upcodes_web -F n=<number>
 ```
 
-- If `headRefOid` doesn't match the HEAD you reviewed, check whether the extra commits touch the files you're commenting on. If they do, line numbers may have moved, so stop and tell him before posting. If they don't, post anyway and mention the mismatch when you hand off.
-- **He has a pending review:** add to it with the GraphQL mutation in step 4. GitHub allows one pending review per user, and the REST API can't add to it.
-- **He has none:** create one with `POST /repos/upcodes/upcodes_web/pulls/<n>/reviews`, passing `commit_id` and a `comments` array. Leaving out `event` keeps it pending.
+- If `headRefOid` doesn't match the HEAD you reviewed, check whether the extra commits touch the files you're commenting on. If they do, line numbers may have moved, so stop and tell the user before posting. If they don't, post anyway and mention the mismatch when you hand off.
+- **The user has a pending review:** GitHub only returns pending reviews to their author, so any review this query returns is theirs. Add to it with the GraphQL mutation in step 4. GitHub allows one pending review per user, and the REST API can't add to it.
+- **They have none:** create one with `POST /repos/upcodes/upcodes_web/pulls/<n>/reviews`, passing `commit_id` and a `comments` array. Leaving out `event` keeps it pending.
 
 ## 2. Check the user's draft
 
 When the user asks you to post, post right away. Don't show drafts or ask for approval first: the comments land in the user's pending review, and they edit them before submitting. If they name specific comments, post only those; otherwise post all of the findings you reported.
 
 - Skip findings the user already made, and tell them which ones you skipped.
-- Point out duplicates in the user's draft, or suggestions of their that conflict with other code.
+- Point out duplicates in the user's draft, or their suggestions that conflict with other code.
 - Write in your own voice. Don't imitate the user or write as if you were them.
 
 ## 3. Start each comment with the disclaimer
@@ -26,10 +26,10 @@ When the user asks you to post, post right away. Don't show drafts or ask for ap
 Every comment you add starts with this line, then a blank line, then the comment:
 
 ```
-<sub>Comment added by <model name> and manually approved by {user's name}.</sub>
+<sub>Comment added by <model name> and manually approved by <user's name>.</sub>
 ```
 
-Replace `<model name>` with the model you're running as (e.g. `Claude Opus 5.5`). Don't reuse an old name. Add it only to your comments, not the user's.
+Replace `<model name>` with the model you're running as (e.g. `Claude Opus 5.5`) and `<user's name>` with the user's name from `git config user.name`. If that's empty, ask the user. Don't query GitHub for it. Don't reuse an old name. Add it only to your comments, not the user's.
 
 ## 4. Post the comments
 
