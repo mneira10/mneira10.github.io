@@ -56,6 +56,12 @@ been applied in the current container/boot. Unchanged reruns skip the restart;
 failed restarts are retried on the next run. Older Codex versions print a reminder
 to restart manually.
 
+### Git identity
+
+`box_setup.sh` sets the global git `user.name` (Mauro Neira) and `user.email`
+(mauro@up.codes) when they aren't already set. Values that are already
+configured, for example by hand or forwarded by the Dev Container, are kept.
+
 ### Re-running devbox setup
 
 `box_setup.sh` still checks for the latest tool releases and updates shell and

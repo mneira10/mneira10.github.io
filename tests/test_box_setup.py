@@ -55,7 +55,10 @@ if command == "curl":
     else:
         raise SystemExit("Unexpected URL: " + url)
 elif command == "git":
-    if "clone" in args:
+    if args[:1] == ["config"]:
+        # The identity settings must actually be written to the test HOME.
+        os.execv(os.environ["SETUP_REAL_GIT"], ["git"] + args)
+    elif "clone" in args:
         destination = Path(args[-1])
         (destination / ".git").mkdir(parents=True)
         if destination.name == "antidote":
@@ -103,6 +106,10 @@ class BoxSetupTest(unittest.TestCase):
             "SETUP_MOCK_TOOL": str(tool),
             "SETUP_SKILLS": str(self.checkout / "skills"),
             "SETUP_REAL_JQ": shutil.which("jq"),
+            "SETUP_REAL_GIT": shutil.which("git"),
+            # Keep the real git away from the host's global and system config.
+            "XDG_CONFIG_HOME": None,
+            "GIT_CONFIG_NOSYSTEM": "1",
         }
 
     def run_setup(self, *, piped=False, succeeds=True, **environment):
@@ -227,6 +234,18 @@ class BoxSetupTest(unittest.TestCase):
         self.assertEqual(installed.read_text(), skill.read_text())
         self.assertEqual(list(backup_dir.iterdir()), backups)
         self.assertTrue(binary.is_file())
+
+    def test_git_identity_is_set_only_when_missing(self):
+        self.run_setup()
+        gitconfig = (self.home / ".gitconfig").read_text()
+        self.assertIn("name = Mauro Neira", gitconfig)
+        self.assertIn("email = mauro@up.codes", gitconfig)
+        (self.home / ".gitconfig").write_text("[user]\n\tname = Someone Else\n")
+        self.run_setup(CLIPROXY_API_KEY=None)
+        gitconfig = (self.home / ".gitconfig").read_text()
+        self.assertIn("name = Someone Else", gitconfig)
+        self.assertNotIn("Mauro Neira", gitconfig)
+        self.assertIn("email = mauro@up.codes", gitconfig)
 
     def test_piped_setup_without_proxy_key_is_repeatable(self):
         self.run_setup(piped=True, CLIPROXY_API_KEY=None)
