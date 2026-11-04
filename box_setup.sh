@@ -292,6 +292,7 @@ fi
 
 PROXY_URL="https://sweep-jawed-captivate.ngrok-free.dev"
 SECRETS_FILE="$HOME/.config/devtools/secrets"
+AGENT_PROXY_CONFIGURED=0
 
 # Points Claude Code and Codex at the CLIProxyAPI proxy. The key is saved in
 # $SECRETS_FILE, which bash and zsh source, and in Claude Code's settings. Asks for the
@@ -370,6 +371,9 @@ TOML
   } >"$tmp"
   cat "$tmp" >"$config"
   rm "$tmp"
+  # The daemon inherits this process's environment, not the shell startup files.
+  export CLIPROXY_API_KEY="$key"
+  AGENT_PROXY_CONFIGURED=1
 }
 
 configure_agent_proxy
@@ -406,6 +410,16 @@ log "Installed"
 for tool in zsh starship nvim btop rg fd bat lazygit fzf zoxide jq herdr; do
   printf '%-8s %s\n' "$tool" "$("$tool" --version 2>&1 | head -1)"
 done
+
+# Restart only after setup succeeds, with the key exported by configure_agent_proxy.
+if [ "$AGENT_PROXY_CONFIGURED" = 1 ] && command -v codex >/dev/null 2>&1; then
+  if codex app-server daemon restart --help >/dev/null 2>&1; then
+    log "Restarting the Codex daemon to load CLIPROXY_API_KEY"
+    codex app-server daemon restart
+  else
+    log "This Codex version cannot restart its daemon; restart Codex to load the proxy key"
+  fi
+fi
 
 # This script runs in its own process, so it can't change the shell that launched it.
 log "Done. To switch this shell to zsh with the new tools, run:"

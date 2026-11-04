@@ -42,6 +42,12 @@ Existing same-name directories are backed up under
 - Both skills require explicit invocation in both agents. Codex policies remain in
   `agents/openai.yaml`; Claude's equivalent is in `SKILL.md` frontmatter.
 
+### CLI proxy
+
+After configuring the proxy, `box_setup.sh` exports `CLIPROXY_API_KEY` and restarts
+the Codex daemon at the end of a successful run when the installed Codex supports
+it. Older versions print a reminder to restart Codex manually.
+
 ### Authors
 
 Me :D (Mauricio Neira) - https://mneira10.github.io/
