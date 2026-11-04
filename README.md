@@ -28,7 +28,8 @@ Just create a simple http server with node:http-server or node: reload and your'
 `~/.local/share/devtools/skills/` and links each one into both `~/.codex/skills/`
 and `~/.claude/skills/`. Running the script from a checkout uses its bundled files;
 the `curl | bash` installation downloads them from this repo's `master` branch.
-Every run refreshes the installed skills.
+Every run checks the bundled skills and replaces installed copies only when their
+contents change.
 Existing same-name directories are backed up under
 `~/.local/share/devtools/skill-backups/` before linking. Unrelated skills are preserved.
 
@@ -44,11 +45,28 @@ Existing same-name directories are backed up under
 
 ### CLI proxy
 
-`box_setup.sh` writes the proxy key into `~/.codex/config.toml` as the `cliproxy`
+`box_setup.sh` uses `CLIPROXY_API_KEY` or the saved key and prompts only when neither
+is available. Supply a new `CLIPROXY_API_KEY` to replace the saved key.
+
+The script writes the proxy key into `~/.codex/config.toml` as the `cliproxy`
 provider's `experimental_bearer_token`, so Codex doesn't depend on its environment.
-At the end of a successful run it restarts the Codex daemon to load the new config
-when the installed Codex supports it. Older versions print a reminder to restart
-Codex manually.
+The config is kept private with mode `0600`. At the end of a successful run, the
+script restarts the Codex daemon when the proxy configuration changed or has not
+been applied in the current container/boot. Unchanged reruns skip the restart;
+failed restarts are retried on the next run. Older Codex versions print a reminder
+to restart manually.
+
+### Re-running devbox setup
+
+`box_setup.sh` still checks for the latest tool releases and updates shell and
+Neovim plugins on each run. With unchanged upstream versions and inputs, managed
+configuration files, skill copies, and shell startup entries retain their contents
+and timestamps. Missing tools and skill links are repaired, existing same-name
+skills are backed up once, and unrelated user configuration is preserved.
+
+Run the isolated regression suite with `python3 -B -m unittest discover -s tests -v`.
+It requires Bash, Python 3, and jq; downloads, tool installers, plugin updates, and
+daemon restarts are mocked, and each test uses a temporary home directory.
 
 ### Authors
 

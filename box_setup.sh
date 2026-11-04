@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Installs personal tools into $HOME so they survive Dev Container rebuilds
 # (/home/ubuntu is a named volume; anything installed with apt is lost on rebuild).
-# Safe to re-run: each run updates every tool to its latest release, skipping downloads
-# for tools that are already current.
-# Points Claude Code and Codex at the CLIProxyAPI proxy; the script asks for the key, or
-# reads it from $CLIPROXY_API_KEY when there's no terminal.
+# Safe to re-run: each run checks for updates, but unchanged tools, skills and managed
+# configuration stay in place. Codex restarts only when its proxy setup needs applying.
+# Points Claude Code and Codex at the CLIProxyAPI proxy; uses $CLIPROXY_API_KEY or the
+# saved key, and asks only when neither is available.
 # Terminals start in zsh; set DEVTOOLS_NO_ZSH=1 to stay in bash.
 #
 #   curl -fsSL https://mneira10.github.io/box_setup.sh | bash
@@ -27,6 +27,24 @@ case "$(uname -m)" in
 esac
 
 log() { printf '\n==> %s\n' "$*"; }
+
+# Preserve existing files (including permissions and timestamps) when their generated
+# contents haven't changed. Read stdin completely before opening the destination.
+write_if_changed() {
+  local file="$1" tmp
+  tmp="$(mktemp)"
+  cat >"$tmp"
+  if ! cmp -s "$tmp" "$file"; then
+    cat "$tmp" >"$file"
+  fi
+  rm -f "$tmp"
+}
+
+ensure_private_file() {
+  if [ "$(stat -Lc '%a' "$1")" != 600 ]; then
+    chmod 600 "$1"
+  fi
+}
 
 # Succeeds if `name` should be (re)installed: `path` is missing, or it was installed from
 # a release other than `version`. Call mark_installed after installing it.
@@ -105,9 +123,13 @@ install_agent_skills() (
   mkdir -p "$skills_dir" "$HOME/.codex/skills" "$HOME/.claude/skills"
   for skill in "${skills[@]}"; do
     target="$skills_dir/$skill"
-    log "Installing $skill skill"
-    rm -rf "$target"
-    cp -R "$source_dir/$skill" "$target"
+    if [ -d "$target" ] && diff -qr "$source_dir/$skill" "$target" >/dev/null; then
+      log "$skill skill is up to date"
+    else
+      log "Installing $skill skill"
+      rm -rf "$target"
+      cp -R "$source_dir/$skill" "$target"
+    fi
 
     for agent in codex claude; do
       link="$HOME/.$agent/skills/$skill"
@@ -178,12 +200,12 @@ else
 fi
 
 log "Configuring bash and zsh"
-# The files under ~/.config/devtools/ are rewritten on every run. Put your own additions
+# The files under ~/.config/devtools/ are managed by this script. Put your own additions
 # in ~/.bashrc and ~/.zshrc instead.
 mkdir -p "$HOME/.config/devtools"
 rm -f "$HOME/.config/devtools.bash"  # Moved into ~/.config/devtools/.
 
-cat >"$HOME/.config/devtools/bashrc" <<'RC'
+write_if_changed "$HOME/.config/devtools/bashrc" <<'RC'
 export PATH="$HOME/.local/bin:$PATH"
 [ -f "$HOME/.config/devtools/secrets" ] && source "$HOME/.config/devtools/secrets"
 # Terminals start bash, so hand interactive sessions over to zsh. Skip `bash -c`
@@ -199,7 +221,7 @@ if [[ $- == *i* ]]; then
 fi
 RC
 
-cat >"$HOME/.config/devtools/zsh_plugins.txt" <<'PLUGINS'
+write_if_changed "$HOME/.config/devtools/zsh_plugins.txt" <<'PLUGINS'
 # Defers compinit until all plugins have added their completions.
 mattmc3/ez-compinit
 zsh-users/zsh-completions kind:fpath path:src
@@ -211,7 +233,7 @@ zsh-users/zsh-autosuggestions
 zsh-users/zsh-syntax-highlighting
 PLUGINS
 
-cat >"$HOME/.config/devtools/zshrc" <<'RC'
+write_if_changed "$HOME/.config/devtools/zshrc" <<'RC'
 export PATH="$HOME/.local/bin:$PATH"
 export SHELL="$HOME/.local/bin/zsh"
 
@@ -238,11 +260,12 @@ RC
 # Adds `line` to `file` unless something already matches `pattern`.
 ensure_line() {
   local file="$1" pattern="$2" line="$3"
-  touch "$file"
   grep -qsF "$pattern" "$file" || echo "$line" >>"$file"
 }
 # Earlier versions of this script sourced ~/.config/devtools.bash.
-sed -i '/\.config\/devtools\.bash/d' "$HOME/.bashrc" 2>/dev/null || true
+if grep -qsF '.config/devtools.bash' "$HOME/.bashrc"; then
+  sed -i '/\.config\/devtools\.bash/d' "$HOME/.bashrc"
+fi
 ensure_line "$HOME/.bashrc" '.config/devtools/bashrc' 'source "$HOME/.config/devtools/bashrc"'
 ensure_line "$HOME/.zshrc" '.config/devtools/zshrc' 'source "$HOME/.config/devtools/zshrc"'
 # ~/.zshenv is read by every zsh, including non-interactive ones that agents start.
@@ -292,25 +315,24 @@ fi
 
 PROXY_URL="https://sweep-jawed-captivate.ngrok-free.dev"
 SECRETS_FILE="$HOME/.config/devtools/secrets"
+PROXY_RESTART_STAMP="$VERSIONS_DIR/codex-proxy-restarted"
+# HOME survives container rebuilds, but a new runtime is a fresh daemon setup.
+# The boot ID and PID namespace identify host reboots and new containers.
+PROXY_RUNTIME_ID="$(cat /proc/sys/kernel/random/boot_id) $(readlink /proc/self/ns/pid)"
 AGENT_PROXY_CONFIGURED=0
 
 # Points Claude Code and Codex at the CLIProxyAPI proxy. The key is saved in
 # $SECRETS_FILE, which bash and zsh source, in Claude Code's settings, and in Codex's
-# config.toml. Asks for the
-# key when there's a terminal (Enter keeps the current one); otherwise uses
-# $CLIPROXY_API_KEY or the saved key.
+# config.toml. Uses $CLIPROXY_API_KEY or the saved key; asks on a terminal only if
+# neither is available.
 configure_agent_proxy() {
   local key="${CLIPROXY_API_KEY:-}" input settings config toml_key tmp
   if [ -z "$key" ] && [ -f "$SECRETS_FILE" ]; then
     key="$(source "$SECRETS_FILE" && printf '%s' "${CLIPROXY_API_KEY:-}")"
   fi
   # curl | bash uses stdin for the script, so read the key from the terminal.
-  if { : </dev/tty; } 2>/dev/null; then
-    if [ -n "$key" ]; then
-      printf 'CLIProxyAPI key (Enter keeps the current one): ' >/dev/tty
-    else
-      printf 'CLIProxyAPI key (Enter skips the proxy setup): ' >/dev/tty
-    fi
+  if [ -z "$key" ] && { : </dev/tty; } 2>/dev/null; then
+    printf 'CLIProxyAPI key (Enter skips the proxy setup): ' >/dev/tty
     IFS= read -rs input </dev/tty || true
     printf '\n' >/dev/tty
     [ -z "$input" ] || key="$input"
@@ -321,8 +343,8 @@ configure_agent_proxy() {
   fi
 
   log "Pointing Claude Code and Codex at $PROXY_URL"
-  (umask 077 && printf 'export CLIPROXY_API_KEY=%q\n' "$key" >"$SECRETS_FILE")
-  chmod 600 "$SECRETS_FILE"
+  (umask 077 && printf 'export CLIPROXY_API_KEY=%q\n' "$key" | write_if_changed "$SECRETS_FILE")
+  ensure_private_file "$SECRETS_FILE"
 
   # Only the two env entries change; other settings are kept.
   settings="$HOME/.claude/settings.json"
@@ -331,15 +353,16 @@ configure_agent_proxy() {
   tmp="$(mktemp)"
   jq --arg url "$PROXY_URL" --arg key "$key" \
     '.env.ANTHROPIC_BASE_URL = $url | .env.ANTHROPIC_AUTH_TOKEN = $key' "$settings" >"$tmp"
-  cat "$tmp" >"$settings"
+  write_if_changed "$settings" <"$tmp"
   rm "$tmp"
-  chmod 600 "$settings"
+  ensure_private_file "$settings"
 
   # Rewrite the managed blocks between the markers. The top-level keys must come before
   # any table, and settings they replace are dropped so TOML doesn't see duplicate keys.
   config="$HOME/.codex/config.toml"
   mkdir -p "$HOME/.codex"
-  touch "$config"
+  [ -e "$config" ] || (umask 077 && touch "$config")
+  ensure_private_file "$config"
   # A JSON string from jq is also a valid TOML basic string.
   toml_key="$(jq -rn --arg key "$key" '$key | tojson')"
   tmp="$(mktemp)"
@@ -372,9 +395,8 @@ experimental_bearer_token = $toml_key
 # <<< devtools cliproxy <<<
 TOML
   } >"$tmp"
-  cat "$tmp" >"$config"
+  write_if_changed "$config" <"$tmp"
   rm "$tmp"
-  chmod 600 "$config"
   AGENT_PROXY_CONFIGURED=1
 }
 
@@ -387,9 +409,9 @@ else
   git clone --depth 1 https://github.com/LazyVim/starter "$HOME/.config/nvim"
   rm -rf "$HOME/.config/nvim/.git"
 fi
-# This file is rewritten on every run; put your own plugin config in other files.
+# This file is managed by the script; put your own plugin config in other files.
 mkdir -p "$HOME/.config/nvim/lua/plugins"
-cat >"$HOME/.config/nvim/lua/plugins/devtools.lua" <<'LUA'
+write_if_changed "$HOME/.config/nvim/lua/plugins/devtools.lua" <<'LUA'
 -- Show dotfiles like .github in the explorer and pickers. Gitignored files like .venv
 -- stay hidden; toggle them with `I` in the explorer or Alt-i in pickers.
 return {
@@ -413,11 +435,18 @@ for tool in zsh starship nvim btop rg fd bat lazygit fzf zoxide jq herdr; do
   printf '%-8s %s\n' "$tool" "$("$tool" --version 2>&1 | head -1)"
 done
 
-# Restart only after setup succeeds, so the daemon reads the new config.toml.
-if [ "$AGENT_PROXY_CONFIGURED" = 1 ] && command -v codex >/dev/null 2>&1; then
+# Restart only after setup succeeds and proxy files have changed since the last
+# successful restart. Leaving the stamp untouched on failure makes the next run retry.
+# An absent stamp also applies existing proxy settings on the first run after upgrading.
+if [ "$AGENT_PROXY_CONFIGURED" = 1 ] && command -v codex >/dev/null 2>&1 \
+    && { [ ! -f "$PROXY_RESTART_STAMP" ] \
+      || [ "$(cat "$PROXY_RESTART_STAMP")" != "$PROXY_RUNTIME_ID" ] \
+      || [ "$SECRETS_FILE" -nt "$PROXY_RESTART_STAMP" ] \
+      || [ "$HOME/.codex/config.toml" -nt "$PROXY_RESTART_STAMP" ]; }; then
   if codex app-server daemon restart --help >/dev/null 2>&1; then
     log "Restarting the Codex daemon to load the proxy config"
     codex app-server daemon restart
+    printf '%s\n' "$PROXY_RUNTIME_ID" >"$PROXY_RESTART_STAMP"
   else
     log "This Codex version cannot restart its daemon; restart Codex to load the proxy config"
   fi
