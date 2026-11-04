@@ -295,11 +295,12 @@ SECRETS_FILE="$HOME/.config/devtools/secrets"
 AGENT_PROXY_CONFIGURED=0
 
 # Points Claude Code and Codex at the CLIProxyAPI proxy. The key is saved in
-# $SECRETS_FILE, which bash and zsh source, and in Claude Code's settings. Asks for the
+# $SECRETS_FILE, which bash and zsh source, in Claude Code's settings, and in Codex's
+# config.toml. Asks for the
 # key when there's a terminal (Enter keeps the current one); otherwise uses
 # $CLIPROXY_API_KEY or the saved key.
 configure_agent_proxy() {
-  local key="${CLIPROXY_API_KEY:-}" input settings config tmp
+  local key="${CLIPROXY_API_KEY:-}" input settings config toml_key tmp
   if [ -z "$key" ] && [ -f "$SECRETS_FILE" ]; then
     key="$(source "$SECRETS_FILE" && printf '%s' "${CLIPROXY_API_KEY:-}")"
   fi
@@ -339,6 +340,8 @@ configure_agent_proxy() {
   config="$HOME/.codex/config.toml"
   mkdir -p "$HOME/.codex"
   touch "$config"
+  # A JSON string from jq is also a valid TOML basic string.
+  toml_key="$(jq -rn --arg key "$key" '$key | tojson')"
   tmp="$(mktemp)"
   {
     cat <<'TOML'
@@ -365,14 +368,13 @@ TOML
 name = "CLIProxyAPI"
 base_url = "$PROXY_URL/v1"
 wire_api = "responses"
-env_key = "CLIPROXY_API_KEY"
+experimental_bearer_token = $toml_key
 # <<< devtools cliproxy <<<
 TOML
   } >"$tmp"
   cat "$tmp" >"$config"
   rm "$tmp"
-  # The daemon inherits this process's environment, not the shell startup files.
-  export CLIPROXY_API_KEY="$key"
+  chmod 600 "$config"
   AGENT_PROXY_CONFIGURED=1
 }
 
@@ -411,13 +413,13 @@ for tool in zsh starship nvim btop rg fd bat lazygit fzf zoxide jq herdr; do
   printf '%-8s %s\n' "$tool" "$("$tool" --version 2>&1 | head -1)"
 done
 
-# Restart only after setup succeeds, with the key exported by configure_agent_proxy.
+# Restart only after setup succeeds, so the daemon reads the new config.toml.
 if [ "$AGENT_PROXY_CONFIGURED" = 1 ] && command -v codex >/dev/null 2>&1; then
   if codex app-server daemon restart --help >/dev/null 2>&1; then
-    log "Restarting the Codex daemon to load CLIPROXY_API_KEY"
+    log "Restarting the Codex daemon to load the proxy config"
     codex app-server daemon restart
   else
-    log "This Codex version cannot restart its daemon; restart Codex to load the proxy key"
+    log "This Codex version cannot restart its daemon; restart Codex to load the proxy config"
   fi
 fi
 

@@ -44,9 +44,11 @@ Existing same-name directories are backed up under
 
 ### CLI proxy
 
-After configuring the proxy, `box_setup.sh` exports `CLIPROXY_API_KEY` and restarts
-the Codex daemon at the end of a successful run when the installed Codex supports
-it. Older versions print a reminder to restart Codex manually.
+`box_setup.sh` writes the proxy key into `~/.codex/config.toml` as the `cliproxy`
+provider's `experimental_bearer_token`, so Codex doesn't depend on its environment.
+At the end of a successful run it restarts the Codex daemon to load the new config
+when the installed Codex supports it. Older versions print a reminder to restart
+Codex manually.
 
 ### Authors
 
