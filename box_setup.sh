@@ -5,6 +5,7 @@
 # configuration stay in place. Codex restarts only when its proxy setup needs applying.
 # Points Claude Code and Codex at the CLIProxyAPI proxy; uses $CLIPROXY_API_KEY or the
 # saved key, and asks only when neither is available.
+# Sets the git user name and email when they are not configured yet.
 # Terminals start in zsh; set DEVTOOLS_NO_ZSH=1 to stay in bash.
 #
 #   curl -fsSL https://mneira10.github.io/box_setup.sh | bash
@@ -312,6 +313,15 @@ fi
 # Download and update the zsh plugins now so the first terminal doesn't have to.
 "$BIN_DIR/zsh" -c "source '$ANTIDOTE_DIR/antidote.zsh' \
   && antidote load '$HOME/.config/devtools/zsh_plugins.txt' && antidote update --bundles"
+
+# Sets the commit identity unless one is already configured, so a different identity
+# set by hand (or forwarded by the Dev Container) is kept.
+log "Configuring git"
+for setting in "user.name=Mauro Neira" "user.email=mauro@up.codes"; do
+  if [ -z "$(git config --global "${setting%%=*}" || true)" ]; then
+    git config --global "${setting%%=*}" "${setting#*=}"
+  fi
+done
 
 PROXY_URL="https://sweep-jawed-captivate.ngrok-free.dev"
 SECRETS_FILE="$HOME/.config/devtools/secrets"
