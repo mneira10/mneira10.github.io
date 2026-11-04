@@ -1,8 +1,8 @@
-# Adding comments to Mauro's pending GitHub review
+# Adding comments to the user's pending GitHub review
 
-Only when Mauro explicitly asks. He edits and submits the review himself, so never submit it, set an `event`, or post standalone comments.
+Only when the user explicitly asks. They edit and submit the review themselves, so never submit it, set an `event`, or post standalone comments.
 
-## 1. Find the PR and his pending review
+## 1. Find the PR and the user's pending review
 
 ```shell
 gh pr view --json number,url,headRefOid
@@ -13,23 +13,23 @@ gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$
 - **He has a pending review:** add to it with the GraphQL mutation in step 4. GitHub allows one pending review per user, and the REST API can't add to it.
 - **He has none:** create one with `POST /repos/upcodes/upcodes_web/pulls/<n>/reviews`, passing `commit_id` and a `comments` array. Leaving out `event` keeps it pending.
 
-## 2. Check his draft
+## 2. Check the user's draft
 
-When he asks you to post, post right away. Don't show drafts or ask for approval first: the comments land in his pending review, and he edits them before submitting. If he names specific comments, post only those; otherwise post all of the findings you reported.
+When the user asks you to post, post right away. Don't show drafts or ask for approval first: the comments land in the user's pending review, and they edit them before submitting. If they name specific comments, post only those; otherwise post all of the findings you reported.
 
-- Skip findings he already made, and tell him which ones you skipped.
-- Point out duplicates in his draft, or suggestions of his that conflict with other code.
-- Write in your own voice. Don't imitate Mauro or write as if you were him.
+- Skip findings the user already made, and tell them which ones you skipped.
+- Point out duplicates in the user's draft, or suggestions of their that conflict with other code.
+- Write in your own voice. Don't imitate the user or write as if you were them.
 
 ## 3. Start each comment with the disclaimer
 
 Every comment you add starts with this line, then a blank line, then the comment:
 
 ```
-<sub>Comment added by <model name> and manually approved by Mauro.</sub>
+<sub>Comment added by <model name> and manually approved by {user's name}.</sub>
 ```
 
-Replace `<model name>` with the model you're running as (e.g. `Claude Opus 5.5`). Don't reuse an old name. Add it only to your comments, not his.
+Replace `<model name>` with the model you're running as (e.g. `Claude Opus 5.5`). Don't reuse an old name. Add it only to your comments, not the user's.
 
 ## 4. Post the comments
 
@@ -37,8 +37,21 @@ Replace `<model name>` with the model you're running as (e.g. `Claude Opus 5.5`)
 - Inline comments must sit on lines inside the diff. For renamed or moved files, only lines in diff hunks work (`git diff <base> HEAD -M -- <old> <new> | grep '^@@'`). Otherwise, anchor on a nearby changed line or use a file-level comment.
 
 ```graphql
-mutation($review:ID!,$path:String!,$line:Int!,$body:String!){
-  addPullRequestReviewThread(input:{pullRequestReviewId:$review,path:$path,line:$line,side:RIGHT,body:$body}){thread{id}}}
+mutation ($review: ID!, $path: String!, $line: Int!, $body: String!) {
+  addPullRequestReviewThread(
+    input: {
+      pullRequestReviewId: $review
+      path: $path
+      line: $line
+      side: RIGHT
+      body: $body
+    }
+  ) {
+    thread {
+      id
+    }
+  }
+}
 # File-level: replace line/side with subjectType:FILE
 ```
 
@@ -50,4 +63,4 @@ For many comments, use a small Python script that loops over `(path, line or Non
 gh api graphql -f query='query{node(id:"<review id>"){... on PullRequestReview{state comments(first:100){totalCount}}}}'
 ```
 
-Check that the state is still `PENDING` and the count equals his comments plus yours. Then tell him how many you added, which ones are file-level and why, and anything to fix in his own draft. He finishes from "Files changed" → "Finish your review".
+Check that the state is still `PENDING` and the count equals the user's comments plus yours. Then tell them how many you added, which ones are file-level and why, and anything to fix in their own draft. They finish from "Files changed" → "Finish your review".
